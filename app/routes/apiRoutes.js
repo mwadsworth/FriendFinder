@@ -1,56 +1,63 @@
-// ===============================================================================
-// LOAD DATA
-// We are linking our routes to a series of "data" sources.
-// These data sources hold arrays of information on table-data, waitinglist, etc.
-// ===============================================================================
+// API Routes
+// =============================================================
 
-// var tableData = require("./app/data/friends");
+// Using fs to Read Data
+// linking our routes to read a series of data sources.
+var fs = require('fs');
 
+module.exports = function(app, path) {
 
-// // ===============================================================================
-// // ROUTING
-// // ===============================================================================
+	// Show all friends available
+	app.get("../data/friends.js", function(req, res) {
+		fs.readFile("../data/friends.js", "utf8", function(err, data) {
+			if (err) {
+				return console.log(err);
+			} else {
+				res.json(JSON.parse(data));
+			}
+		});
+	});
 
-// module.exports = function(app) {
-  // API GET Requests
-  // Below code handles when users "visit" a page.
-  // In each of the below cases when a user visits a link
-  // (ex: localhost:PORT/api/admin... they are shown a JSON of the data in the table)
-  // ---------------------------------------------------------------------------
+	app.post("../data/friends.js", function(req, res) {
+		// closest match object.
+		var results = [];
 
-  // app.get("/api/tables", function(req, res) {
-  //   res.json(tableData);
-  // });
+		// string of JSON info
+		var postResponse = JSON.stringify(req.body);
 
- 
-  // API POST Requests
-  // Below code handles when a user submits a form and thus submits data to the server.
-  // In each of the below cases, when a user submits form data (a JSON object)
-  // ...the JSON is pushed to the appropriate JavaScript array
-  // (ex. User fills out a reservation request... this data is then sent to the server...
-  // Then the server saves the data to the tableData array)
-  // ---------------------------------------------------------------------------
+		fs.readFile("../data/friends.js", function (err, data) {
+			// Read the existing array
+		    var friendFile = JSON.parse(data);
 
-  // app.post("/api/tables", function(req, res) {
-  //   // Note the code here. Our "server" will respond to requests and let users know if they have a table or not.
-  //   // It will do this by sending out the value "true" have a table
-  //   // req.body is available since we're using the body parsing middleware
-  //   if (tableData.length < 5) {
-  //     tableData.push(req.body);
-  //     res.json(true);
-  //   }
+		    // Store the difference in values
+		    var closestMatch = 0;
+		    var matchScore = 999999999999999;
 
-  // });
+		    // Loop through the file to find the closest match
+		    for (var i = 0; i < friendFile.length; i++) {
+		    	var spaceBetween = 0;
+		    	for (var j = 0; j < friendFile[i]['answers[]'].length; j++) {
+		    		spaceBetween += Math.abs((parseInt(req.body['answers[]'][j]) - parseInt(friendFile[i]['answers[]'][j])));
+				}
 
-  // ---------------------------------------------------------------------------
-  // I added this below code so you could clear out the table while working with the functionality.
-  // Don"t worry about it!
+				// If the space between the current listing is the closest to the user, update the closestMatch
+				if(spaceBetween <= matchScore) {
+					matchScore = spaceBetween;
+					closestMatch = i;
+		    	}
+		    }
 
-//   app.post("/api/clear", function(req, res) {
-//     // Empty out the arrays of data
-//     tableData.length = 0;
-   
+		    // console.log("Closest match: " + friendFile[closestMatch].name);
 
-//     res.json({ ok: true });
-//   });
-// };
+		    results.push(friendFile[closestMatch]);
+
+		    // Add the new person to the existing array
+		    friendFile.push(JSON.parse(postResponse));
+
+		    // Push back the entire updated result immediately
+		    fs.writeFile("../data/friends.js", JSON.stringify(friendFile));
+			res.send(results[0]);
+
+		});
+	});
+}
